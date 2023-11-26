@@ -1,0 +1,15 @@
+# Bitwarden Export
+
+If you want to move Bitwarden credentials to another server, there is one major feature missing in the vendors clients. Export and reimport your credentials with related attachments.
+
+This Powershell script shall solve the issue.
+
+## Preconditions
+
+- BitWarden CLI is installed and authenticated.
+
+## Hints
+
+```powershell
+bw list organizations | ConvertFrom-Json | ForEach-Object {$_.name = "foo"; $_} | ConvertTo-Json
+```
