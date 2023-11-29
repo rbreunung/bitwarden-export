@@ -6,10 +6,34 @@ This Powershell script shall solve the issue.
 
 ## Preconditions
 
-- BitWarden CLI is installed and authenticated.
+1. All commands are executed in a Powershell. (Tested with 7.4)
+2. BitWarden CLI is installed and authenticated.
+
+```powershell
+# login to your account
+bw login
+# Optional: unlock your account if you already are logged in from a passed session
+bw unlock
+# set the key for the terminal session to avoid further authentication queries
+$env:BW_SESSION="<my token>"
+```
 
 ## Hints
 
+## Developer Notes
+
+### Edit a Value
+
+Editing a value in an converted Object is pretty straight forward.
+
 ```powershell
 bw list organizations | ConvertFrom-Json | ForEach-Object {$_.name = "foo"; $_} | ConvertTo-Json
+```
+
+### JSON Conversion Depth
+
+Of course the default `-Depth` values of `ConvertFrom-Json` and `ConvertTo-Json` are not equal. With a `ConvertTo-Json` default depth of 2 you get nicely partially converted objects if you test your roundtrip.
+
+```powershell
+$data = Invoke-Expression "bw list items --pretty"  | ConvertFrom-Json -Depth 10 | ConvertTo-Json -Depth 10
 ```
