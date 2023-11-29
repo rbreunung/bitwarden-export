@@ -7,9 +7,8 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
 function New-ExportFolder {
     $exportFolderName = "export-$(Get-Date -Format "yyyy-MM-dd-HH-mm")"
-    $ExportDirectory = Join-Path -Path (Get-Location) -ChildPath $exportFolderName
-    New-Item -Path $ExportDirectory -ItemType Directory
-    return $ExportDirectory
+    $exportDirectory = Join-Path -Path (Get-Location) -ChildPath $exportFolderName
+    New-Item -Path $exportDirectory -ItemType Directory
 }
 
 # check bitwarden unlocked
@@ -21,7 +20,7 @@ if ( -not (($bitwardenData.status) -eq "unlocked") ) {
 }
 
 # create the export directory
-$ExportDirectory = New-ExportFolder
+$exportDirectory = New-ExportFolder
 
 # Read data from Bitwarden
 $bitwardenData = Invoke-Expression "bw list items"  | ConvertFrom-Json -Depth 10
