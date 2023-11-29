@@ -25,8 +25,15 @@ $exportDirectory = New-ExportFolder
 # Read data from Bitwarden
 $bitwardenData = Invoke-Expression "bw list items"  | ConvertFrom-Json -Depth 10
 foreach ($bitwardenElement in $bitwardenData) {
-    Write-Output $bitwardenData
-    break
+    $itemDirectory = Join-Path -Path $exportDirectory -ChildPath ($bitwardenElement.id)
+    $null = New-Item -Path $itemDirectory -ItemType Directory
+    Out-File -FilePath (Join-Path -Path $itemDirectory -ChildPath "$($bitwardenElement.id).json") `
+      -InputObject (ConvertTo-Json -InputObject $bitwardenElement -Depth 10)
+    foreach ($attachment in $bitwardenElement.attachments) {
+        Write-Output "Found in entry $($bitwardenElement.name) attachment $($attachment.fileName) "
+        $attachmentPath = Join-Path $itemDirectory ($attachment.fileName)
+        $null = Invoke-Expression "bw get attachment $($attachment.id) --itemid $($bitwardenElement.id) --output $attachmentPath"
+    }
 }
 
 
