@@ -32,8 +32,9 @@ foreach ($bitwardenElement in $bitwardenData) {
     foreach ($attachment in $bitwardenElement.attachments) {
         Write-Output "Found in entry $($bitwardenElement.name) attachment $($attachment.fileName) "
         $attachmentPath = Join-Path $itemDirectory ($attachment.fileName)
-        $null = Invoke-Expression "bw get attachment $($attachment.id) --itemid $($bitwardenElement.id) --output $attachmentPath"
+        $null = Invoke-Expression "bw get attachment $($attachment.id) --itemid $($bitwardenElement.id) --output `"$attachmentPath`"" --
     }
 }
+Write-Output "Processed $($bitwardenData.Count) items in total."
 
 
