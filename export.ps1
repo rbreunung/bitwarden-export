@@ -6,7 +6,7 @@
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
 function New-ExportFolder {
-    $exportFolderName = "export-$(Get-Date -Format "yyyy-MM-dd-HH-mm")"
+    $exportFolderName = "export-$(Get-Date -Format "yyyy-MM-dd-HH-mm-ss")"
     $exportDirectory = Join-Path -Path (Get-Location) -ChildPath $exportFolderName
     New-Item -Path $exportDirectory -ItemType Directory
 }
