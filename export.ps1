@@ -12,8 +12,8 @@ function New-ExportFolder {
 }
 
 # check bitwarden unlocked
-$bitwardenData = Invoke-Expression "bw status"  | ConvertFrom-Json -Depth 10
-if ( -not (($bitwardenData.status) -eq "unlocked") ) {
+$bitwardenStatus = Invoke-Expression "bw status"  | ConvertFrom-Json -Depth 1 | Select-Object -ExpandProperty status
+if ( -not ($bitwardenStatus -eq "unlocked") ) {
     Write-Error "Bitwarden is not unlocked! Please unlock your Bitwarden CLI."
     Pause
     return -1
@@ -23,18 +23,36 @@ if ( -not (($bitwardenData.status) -eq "unlocked") ) {
 $exportDirectory = New-ExportFolder
 
 # Read data from Bitwarden
+$exportFile = Join-Path -Path $exportDirectory -ChildPath "export-private.json"
+$null = Invoke-Expression -Command "bw export --format json --output `"$exportFile`" "
+$bitwardenOrganizations = Invoke-Expression -Command "bw list organizations" | ConvertFrom-Json -Depth 2
+$bitwardenContent = Get-Content -Path $exportFile | ConvertFrom-Json -Depth 10
+Write-Output "Exported $($bitwardenContent.items.Count) items from private vault."
+
+foreach ($organization in $bitwardenOrganizations) {
+    Out-File -FilePath (Join-Path -Path $exportDirectory -ChildPath "$($organization.id).json") `
+        -InputObject (ConvertTo-Json -InputObject $organization -Depth 1)
+    $exportFile = Join-Path -Path $exportDirectory -ChildPath "export-$($organization.id).json"
+    $null = Invoke-Expression -Command "bw export --format json --organizationid $($organization.id) --output `"$exportFile`" "
+    $bitwardenContent = Get-Content -Path $exportFile | ConvertFrom-Json -Depth 10
+    Write-Output "Exported $($bitwardenContent.items.Count) items from organization $($organization.name) vault."
+}
+Remove-Variable bitwardenContent
+
 $bitwardenData = Invoke-Expression "bw list items"  | ConvertFrom-Json -Depth 10
 foreach ($bitwardenElement in $bitwardenData) {
     $itemDirectory = Join-Path -Path $exportDirectory -ChildPath ($bitwardenElement.id)
-    $null = New-Item -Path $itemDirectory -ItemType Directory
-    Out-File -FilePath (Join-Path -Path $itemDirectory -ChildPath "$($bitwardenElement.id).json") `
-      -InputObject (ConvertTo-Json -InputObject $bitwardenElement -Depth 10)
-    foreach ($attachment in $bitwardenElement.attachments) {
-        Write-Output "Found in entry $($bitwardenElement.name) attachment $($attachment.fileName) "
-        $attachmentPath = Join-Path $itemDirectory ($attachment.fileName)
-        $null = Invoke-Expression "bw get attachment $($attachment.id) --itemid $($bitwardenElement.id) --output `"$attachmentPath`"" --
+    if (Get-Member -InputObject $bitwardenElement -Name "attachments") {
+        Write-Output "The element $($bitwardenElement.name) has $($bitwardenElement.attachments.Count) attachments."
+        $null = New-Item -Path $itemDirectory -ItemType Directory
+        foreach ($attachment in $bitwardenElement.attachments) {
+            Write-Output "Found in entry $($bitwardenElement.name) attachment $($attachment.fileName) "
+            $attachmentPath = Join-Path $itemDirectory ($attachment.fileName)
+            $null = Invoke-Expression "bw get attachment $($attachment.id) --itemid $($bitwardenElement.id) --output `"$attachmentPath`"" --
+        }
     }
 }
-Write-Output "Processed $($bitwardenData.Count) items in total."
+
+Write-Output "Processed Downloads from all elements."
 
 
