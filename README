@@ -74,3 +74,4 @@ Con:
 
 - Major: No attachment is referenced.
 - Minor: Every organization and the private vault need to be exported separately.
+- Does not export folder IDs for organization vault export.
