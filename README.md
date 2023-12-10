@@ -59,7 +59,7 @@ Con:
 
 - No folder descriptions exported.
 - No organization descriptions.
-- Cannot be simply imported even though the JSON format looks the same.
+- Can be imported one by one through item create. (adapt item -> encode -> create)
 
 ### Approach `bw export`
 
