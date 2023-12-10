@@ -24,11 +24,14 @@ $env:BW_SESSION="<my token>"
 
 ### Export data model
 
-- export folder with current date
-  - `export-private.json` contains the export of the private vault
-  - `UUID.json` contains the description of each **organization** with `id` UUID
-  - `export-UUID.json` contains the export of each **organization** with `id` UUID
-  - `UUID` folder contains the attachment files of the **item** with `id` UUID
+- Export folder with current date.
+  - `export-list-folders.json` contains an array of all folders as provided by `bw list folders`.
+  - `export-list-items.json` contains an array of all items as provided by `bw list items`.
+  - `export-list-organizations.json` contains an array of all items as provided by `bw list organizations`.
+  - `export-private.json` contains the export of the private vault.
+  - `export-UUID.json` contains the export of each **organization** with `id` UUID.
+  - `UUID` folder contains the attachment files of the **item** with `id` UUID.
+    - The attachment files are in their original name with their content.
 
 ### Edit a Value
 
@@ -75,3 +78,11 @@ Con:
 - Major: No attachment is referenced.
 - Minor: Every organization and the private vault need to be exported separately.
 - Does not export folder IDs for organization vault export.
+
+### JSON parsing via `Invoke-Expression`
+
+Special characters are not properly parsed when reading a `bw list` via std out stream directly into a Powershell pipeline. The cause I did not get till now. A workaround is to pipe the std out directly into a file and continue the work with a file.
+
+```powershell
+bw list items > export-list.json
+```
