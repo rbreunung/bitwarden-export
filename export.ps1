@@ -57,7 +57,12 @@ foreach ($organization in $bitwardenOrganizations) {
 Remove-Variable bitwardenContent
 
 ## export attachments
+Write-Output "Start processing attachments..."
+$counter = 0
 foreach ($bitwardenElement in $bitwardenItems) {
+    if (0 -eq (++$counter %100)) {
+        Write-Output "  ... $counter items processed so far ..."
+    }
     $itemDirectory = Join-Path -Path $exportDirectory -ChildPath ($bitwardenElement.id)
     if (Get-Member -InputObject $bitwardenElement -Name "attachments") {
         Write-Debug "The element $($bitwardenElement.name) has $($bitwardenElement.attachments.Count) attachments." 
