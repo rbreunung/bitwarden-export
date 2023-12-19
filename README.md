@@ -2,7 +2,7 @@
 
 If you want to move Bitwarden credentials to another server, there is one major feature missing in the vendors clients. Export and reimport your credentials with related attachments.
 
-This Powershell script shall solve the issue.
+This Powershell script shall solve the issue. Please refer to the designed [use cases](doc/import-use-cases.md).
 
 ## Preconditions
 
