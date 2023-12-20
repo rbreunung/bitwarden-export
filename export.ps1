@@ -60,7 +60,7 @@ Remove-Variable bitwardenContent
 Write-Output "Start processing attachments..."
 $counter = 0
 foreach ($bitwardenElement in $bitwardenItems) {
-    if (0 -eq (++$counter %100)) {
+    if (0 -eq (++$counter % 100)) {
         Write-Output "  ... $counter items processed so far ..."
     }
     $itemDirectory = Join-Path -Path $exportDirectory -ChildPath ($bitwardenElement.id)

@@ -44,7 +44,7 @@ After applied [import preconditions](#import-preconditions) import your data.
 
 ```powershell
 # Import the given Path
-./import.psi -ExportPath <String>
+./import.psi -ImportPath <String>
 # e.g.
-./import.ps1 -ExportPath ./export-2023-12-19-07-10-25/
+./import.ps1 -ImportPath ./export-2023-12-19-07-10-25/
 ```

@@ -2,7 +2,7 @@
 
 param (
     [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Provide the target path of the export script.")]
-    [string]$ExportPath,
+    [string]$ImportPath,
     [Parameter( HelpMessage = "In debug mode only the read information is printed to test, what will be done.")]
     [bool]$DebugMode = $true,
     [Parameter(HelpMessage = "Only the folders shall be imported and a folder mapping shall be created.")]
@@ -35,18 +35,53 @@ if ( -not ($BitwardenStatus -eq "unlocked") ) {
 Remove-Variable BitwardenStatus
     
 # check valid folder
-if (-not (Test-Path $ExportPath -PathType Container)) {
-    Write-Error "The path `"$ExportPath`" is not existing. Please provide a valid export path from the export script." -Category InvalidArgument
+if (-not (Test-Path $ImportPath -PathType Container)) {
+    Write-Error "The path `"$ImportPath`" is not existing. Please provide a valid export path from the export script." -Category InvalidArgument
     exit 2
 }
     
-# TODO validate $FolderMapFile
-$FolderMapPath = Join-Path $ExportPath -ChildPath $FolderMapFile
-    
-# Create all folders
-if (-not ($OnlyPrivateVault)) {
+# TODO validate
+$FolderMapPath = Join-Path $ImportPath -ChildPath $FolderMapFile
+$ItemMapPath = Join-Path $ImportPath -ChildPath $ItemMapFile
+
+function ConvertTo-Base64 {
+    param (
+        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, HelpMessage = "This UTF-8 string value shall be transformed into a Base64 coding.")]
+        [string] $InputString
+    )
+
+    process {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($InputString)
+        $baseEncoded = [System.Convert]::ToBase64String($bytes)
+        return $baseEncoded
+    }
+}
+
+function Find-MapValue {
+    param (
+        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "This is an array of Powershell object with `"id`" as key and `"target-id`" as value")]
+        [psobject[]] $Mapping,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "This UUID will be searched in the mapping array for the target UUID.")]
+        [string] $SearchUuid
+    )
+
+    process {
+
+        foreach ($item in $Mapping) {
+            if ($item.id -eq $SearchUuid) {
+                return $item.'target-id'
+            }
+        }
+        Write-Warning "No mapping found for $SearchUuid in $($Mapping.Count) search items."
+        return $null
+    }
+}
+
+# Create all folders. Accepts $OnlyFolder.
+if (-not ($OnlyPrivateVault -or $OnlyAttachments)) {
         
-    $FolderFile = Join-Path $ExportPath "export-list-folders.json"
+    $FolderFile = Join-Path $ImportPath "export-list-folders.json"
+    Write-Output "Reading exported folders from `"export-list-folders.json`"."
     if (Test-Path $FolderFile -PathType Leaf) {
 
         $FolderContent = Get-Content $FolderFile | ConvertFrom-Json -Depth 2
@@ -59,10 +94,9 @@ if (-not ($OnlyPrivateVault)) {
                     $bytes = [System.Text.Encoding]::UTF8.GetBytes($_)
                     $baseEncoded = [System.Convert]::ToBase64String($bytes)
                     if ($DebugMode) {
-                        Write-Debug "bw create folder $baseEncoded"
+                        Write-Debug "  bw create folder $baseEncoded"
                     }
                     else {
-                        # TODO create folder map
                         $NewFolder = bw create folder $baseEncoded | ConvertFrom-Json -Depth 1
                         Add-Member -InputObject $FolderContent[$i] -MemberType NoteProperty -Name "target-id" -Value $NewFolder.id
                         Remove-Variable NewFolder
@@ -74,9 +108,11 @@ if (-not ($OnlyPrivateVault)) {
             Remove-Variable FolderElement
         }
 
-        # store the new mapping
-        ConvertTo-Json $FolderContent -Depth 2 | Out-File $FolderMapPath
-        Write-Output "All folders processed. Folder map written to $FolderMapFile ..."
+        # store the new folder mapping
+        if (-not $DebugMode) {
+            ConvertTo-Json $FolderContent -Depth 2 | Out-File $FolderMapPath
+        }
+        Write-Output "... all folders processed. Folder map written to `"$FolderMapFile`""
     }
     else {
         Write-Error "The folder file `"$FolderFile`" is missing."
@@ -84,7 +120,8 @@ if (-not ($OnlyPrivateVault)) {
     }
     Remove-Variable FolderFile
 }
-else {
+# If folder mapping is not in memory it must be read from file. Not required if only attachments need processing.
+elseif (-not $OnlyAttachments) {
     if (-not (Test-Path $FolderMapPath -PathType Leaf)) {
         Write-Error "The file $FolderMapFile has not been found in `"$FolderMapPath`"!"
         exit 4
@@ -93,21 +130,46 @@ else {
 }
 
 
-if (-not ($OnlyFolder)) {
-    # Read all personal items
-    $ExportPrivate = Get-Content (Join-Path $ExportPath "export-private.json") | ConvertFrom-Json -Depth 10
-    foreach ($BitwardenItem in $ExportPrivate.items) {
-        Write-Debug "Processing Item $($BitwardenItem.name)"
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json $BitwardenItem -Depth 8))
-        $baseEncoded = [System.Convert]::ToBase64String($bytes)
-        if ($DebugMode) {
-            Write-Debug "bw create item $baseEncoded"
+# Read all personal items. Accepts $OnlyPrivateVault
+if (-not ($OnlyFolder -or $OnlyAttachments)) {
+    if ($OnlyPrivateVault) {
+        Write-Output "Reading private items from `"export-list-items.json`"."
+    }
+    else {
+        Write-Output "Reading all items from `"export-list-items.json`"."
+    }
+    $ExportAll = Get-Content (Join-Path $ImportPath "export-list-items.json") | ConvertFrom-Json -Depth 10
+    for ($i = 0; $i -lt $ExportAll.Length; $i++) {
+        if ((0 -eq ($i % 20)) -and (-not (0 -eq $i))) {
+            Write-Output "  ... $i items processed so far ..."
+        }
+        $BitwardenItem = $ExportAll[$i]
+        if ($OnlyPrivateVault -and ($null -eq $BitwardenItem.organizationId)) {
+            Write-Debug "Skip organization item $($BitwardenItem.name) because of `"private items only`" import..."
+            continue
         }
         else {
-            # TODO create item map
-            $null = bw create item $baseEncoded
+            Write-Debug "Processing Item $($BitwardenItem.name)..."
+            $BitwardenItem = $BitwardenItem | Select-Object -Property * -ExcludeProperty organizationId
+        }
+
+        if ($BitwardenItem.folderId) { 
+            $BitwardenItem.folderId = $BitwardenItem.folderId | Find-MapValue $FolderContent 
+        }
+        $baseEncoded = ConvertTo-Json $BitwardenItem -Depth 9 | ConvertTo-Base64 
+        if ($DebugMode) {
+            Write-Debug "  bw create item $baseEncoded"
+        }
+        else {
+            $NewItem = bw create item $baseEncoded | ConvertFrom-Json -Depth 10
+            Add-Member -InputObject $ExportAll[$i] -MemberType NoteProperty -Name "target-id" -Value $NewItem.id
         }
     }
+    # store the new item mapping
+    if (-not $DebugMode) {
+        ConvertTo-Json $ExportAll -Depth 10 | Out-File $ItemMapPath
+    }
+    Write-Output "... all $($ExportAll.Count) items processed. Item map written to `"$ItemMapPath`""
 }
 
 # Match all organizations
@@ -115,7 +177,7 @@ if (-not ($OnlyFolder)) {
 # add attachments to all items
 
 if ($false) {
-    foreach ($element in Get-ChildItem $ExportPath -Directory) {
+    foreach ($element in Get-ChildItem $ImportPath -Directory) {
         $name = $element.Name
         $itemPath = Join-Path $element "$name.json"
         if (-not (Test-Path $itemPath -PathType Leaf)) {
