@@ -59,13 +59,18 @@ function ConvertTo-Base64 {
 
 function Find-MapValue {
     param (
-        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "This is an array of Powershell object with `"id`" as key and `"target-id`" as value")]
+        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "This is an array of Powershell object with `"id`" as key and `"target-id`" as value")]
         [psobject[]] $Mapping,
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "This UUID will be searched in the mapping array for the target UUID.")]
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline = $true, HelpMessage = "This UUID will be searched in the mapping array for the target UUID.")]
+        [AllowEmptyString()]
         [string] $SearchUuid
     )
 
     process {
+
+        if ($null -eq $SearchUuid) {
+            return $null
+        }
 
         foreach ($item in $Mapping) {
             if ($item.id -eq $SearchUuid) {
@@ -153,9 +158,7 @@ if (-not ($OnlyFolder -or $OnlyAttachments)) {
             $BitwardenItem = $BitwardenItem | Select-Object -Property * -ExcludeProperty organizationId
         }
 
-        if ($BitwardenItem.folderId) { 
-            $BitwardenItem.folderId = $BitwardenItem.folderId | Find-MapValue $FolderContent 
-        }
+        $BitwardenItem.folderId = Find-MapValue $FolderContent $BitwardenItem.folderId
         $baseEncoded = ConvertTo-Json $BitwardenItem -Depth 9 | ConvertTo-Base64 
         if ($DebugMode) {
             Write-Debug "  bw create item $baseEncoded"
