@@ -1,6 +1,10 @@
 {
     "cSpell.words": [
         "Bitwarden",
-        "itemid"
+        "itemid",
+        "psobject"
+    ],
+    "cSpell.enableFiletypes": [
+        "powershell"
     ]
 }

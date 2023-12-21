@@ -4,6 +4,7 @@
 # https://learn.microsoft.com/de-de/powershell/module/microsoft.powershell.core/about/about_character_encoding?view=powershell-7.4
 # ensure the output is UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+. ./00-common.ps1
 
 function New-ExportFolder {
     $exportFolderName = "export-$(Get-Date -Format "yyyy-MM-dd-HH-mm-ss")"
@@ -12,11 +13,10 @@ function New-ExportFolder {
 }
 
 # check bitwarden unlocked
-$bitwardenStatus = Invoke-Expression "bw status"  | ConvertFrom-Json -Depth 1 | Select-Object -ExpandProperty status
-if ( -not ($bitwardenStatus -eq "unlocked") ) {
+if ( Get-BitwardenStatusLocked ) {
     Write-Error "Bitwarden is not unlocked! Please unlock your Bitwarden CLI."
     Pause
-    return -1
+    return 1
 }
 
 # create the export directory

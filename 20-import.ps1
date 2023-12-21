@@ -9,6 +9,8 @@ param (
     [switch]$OnlyFolder,
     [Parameter(HelpMessage = "Only the private vault shall be imported. A folder mapping used from previous step. A item mapping is created.")]
     [switch]$OnlyPrivateVault,
+    [Parameter(HelpMessage = "Only all items shall be imported. A folder mapping used from previous step. A item mapping is created.")]
+    [switch]$OnlyItems,
     [Parameter(HelpMessage = "Only the file attachments shall be imported. A item mapping used from previous step.")]
     [switch]$OnlyAttachments,
     [Parameter(HelpMessage = "The output file of the folder mapping. The file will be created relative to the export path.")]
@@ -16,9 +18,10 @@ param (
     [Parameter(HelpMessage = "The output file of the item mapping. The file will be created relative to the export path.")]
     [string]$ItemMapFile = "item-map.json"
 )
-    
+
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
-    
+. ./common.ps1
+
 # debug mode settings
 if ($DebugMode) {
     $DebugPreference = 'Continue'
@@ -26,109 +29,32 @@ if ($DebugMode) {
 }
 
 # check bitwarden unlocked
-$BitwardenStatus = Invoke-Expression "bw status"  | ConvertFrom-Json -Depth 1 | Select-Object -ExpandProperty status
-if ( -not ($BitwardenStatus -eq "unlocked") ) {
+if ( Get-BitwardenStatusLocked ) {
     Write-Error "Bitwarden is not unlocked! Please unlock your Bitwarden CLI."
     Pause
-    return 1
+    exit 1
 }
-Remove-Variable BitwardenStatus
-    
+
 # check valid folder
 if (-not (Test-Path $ImportPath -PathType Container)) {
     Write-Error "The path `"$ImportPath`" is not existing. Please provide a valid export path from the export script." -Category InvalidArgument
+    Pause
     exit 2
 }
-    
+
 # TODO validate
 $FolderMapPath = Join-Path $ImportPath -ChildPath $FolderMapFile
 $ItemMapPath = Join-Path $ImportPath -ChildPath $ItemMapFile
 
-function ConvertTo-Base64 {
-    param (
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, HelpMessage = "This UTF-8 string value shall be transformed into a Base64 coding.")]
-        [string] $InputString
-    )
-
-    process {
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes($InputString)
-        $baseEncoded = [System.Convert]::ToBase64String($bytes)
-        return $baseEncoded
-    }
-}
-
-function Find-MapValue {
-    param (
-        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "This is an array of Powershell object with `"id`" as key and `"target-id`" as value")]
-        [psobject[]] $Mapping,
-        [Parameter(Mandatory = $true, Position = 1, ValueFromPipeline = $true, HelpMessage = "This UUID will be searched in the mapping array for the target UUID.")]
-        [AllowEmptyString()]
-        [string] $SearchUuid
-    )
-
-    process {
-
-        if ($null -eq $SearchUuid) {
-            return $null
-        }
-
-        foreach ($item in $Mapping) {
-            if ($item.id -eq $SearchUuid) {
-                return $item.'target-id'
-            }
-        }
-        Write-Warning "No mapping found for $SearchUuid in $($Mapping.Count) search items."
-        return $null
-    }
-}
-
 # Create all folders. Accepts $OnlyFolder.
-if (-not ($OnlyPrivateVault -or $OnlyAttachments)) {
-        
-    $FolderFile = Join-Path $ImportPath "export-list-folders.json"
-    Write-Output "Reading exported folders from `"export-list-folders.json`"."
-    if (Test-Path $FolderFile -PathType Leaf) {
+if (-not ($OnlyPrivateVault -or $OnlyItems -or $OnlyAttachments)) {
 
-        $FolderContent = Get-Content $FolderFile | ConvertFrom-Json -Depth 2
-        for ($i = 0; $i -lt $FolderContent.Length; $i++) {
-            $FolderElement = $FolderContent[$i]
-            if ($null -ne $FolderElement.id) {
-
-                Write-Debug "Writing object $($FolderElement.object) name $($FolderElement.name) with id $($FolderElement.id)."
-                ConvertTo-Json $FolderElement -Depth 1 | ForEach-Object {
-                    $bytes = [System.Text.Encoding]::UTF8.GetBytes($_)
-                    $baseEncoded = [System.Convert]::ToBase64String($bytes)
-                    if ($DebugMode) {
-                        Write-Debug "  bw create folder $baseEncoded"
-                    }
-                    else {
-                        $NewFolder = bw create folder $baseEncoded | ConvertFrom-Json -Depth 1
-                        Add-Member -InputObject $FolderContent[$i] -MemberType NoteProperty -Name "target-id" -Value $NewFolder.id
-                        Remove-Variable NewFolder
-                    }
-                    Remove-Variable bytes
-                    Remove-Variable baseEncoded
-                }
-            }
-            Remove-Variable FolderElement
-        }
-
-        # store the new folder mapping
-        if (-not $DebugMode) {
-            ConvertTo-Json $FolderContent -Depth 2 | Out-File $FolderMapPath
-        }
-        Write-Output "... all folders processed. Folder map written to `"$FolderMapFile`""
-    }
-    else {
-        Write-Error "The folder file `"$FolderFile`" is missing."
-        exit 3
-    }
-    Remove-Variable FolderFile
+    $null = Invoke-Expression "./21-import-folder.ps1" 
 }
 # If folder mapping is not in memory it must be read from file. Not required if only attachments need processing.
-elseif (-not $OnlyAttachments) {
+if (-not $OnlyAttachments) {
     if (-not (Test-Path $FolderMapPath -PathType Leaf)) {
-        Write-Error "The file $FolderMapFile has not been found in `"$FolderMapPath`"!"
+        Write-Error "The file $FolderMapFile has not been found in `"$FolderMapPath`"! This is required for folder to item mapping."
         exit 4
     }
     $FolderContent = Get-Content $FolderMapPath | ConvertFrom-Json -Depth 2
@@ -155,6 +81,7 @@ if (-not ($OnlyFolder -or $OnlyAttachments)) {
         }
         else {
             Write-Debug "Processing Item $($BitwardenItem.name)..."
+            # delete organizationId as we do not handle it for now - TODO more organization support
             $BitwardenItem = $BitwardenItem | Select-Object -Property * -ExcludeProperty organizationId
         }
 
@@ -162,10 +89,12 @@ if (-not ($OnlyFolder -or $OnlyAttachments)) {
         $baseEncoded = ConvertTo-Json $BitwardenItem -Depth 9 | ConvertTo-Base64 
         if ($DebugMode) {
             Write-Debug "  bw create item $baseEncoded"
+            break
         }
         else {
             $NewItem = bw create item $baseEncoded | ConvertFrom-Json -Depth 10
             Add-Member -InputObject $ExportAll[$i] -MemberType NoteProperty -Name "target-id" -Value $NewItem.id
+            break
         }
     }
     # store the new item mapping
@@ -178,8 +107,16 @@ if (-not ($OnlyFolder -or $OnlyAttachments)) {
 # Match all organizations
 
 # add attachments to all items
+if ($OnlyAttachments) {
+    if (-not (Test-Path $ItemMapPath -PathType Leaf)) {
+        Write-Error "The file $ItemMapFile has not been found in `"$ItemMapPath`"! This is required for item to attachment mapping."
+        exit 5
+    }
+    $ExportAll = Get-Content $ItemMapPath | ConvertFrom-Json -Depth 10
+}
 
-if ($false) {
+
+if (-not ($OnlyFolder -or $OnlyPrivateVault -or $OnlyItems)) {
     foreach ($element in Get-ChildItem $ImportPath -Directory) {
         $name = $element.Name
         $itemPath = Join-Path $element "$name.json"
