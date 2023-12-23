@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 # I implement this script with latest Powershell available an do not intend to test older ones. It may or may be not working for Powershell 5.
 #Requires -Version 7.0
 
@@ -38,8 +39,8 @@ Write-Output "Exported $($bitwardenOrganizations.Count) organizations total."
 ## Export folder listing
 $exportFile = Join-Path -Path $exportDirectory -ChildPath "export-list-folders.json"
 bw list folders > $exportFile
-$bitwardenfolders = Get-Content $exportFile | ConvertFrom-Json -Depth 2
-Write-Output "Exported $($bitwardenfolders.Count) folders total."
+$BitwardenFolders = Get-Content $exportFile | ConvertFrom-Json -Depth 2
+Write-Output "Exported $($BitwardenFolders.Count) folders total."
 
 ## Export folder items
 $exportFile = Join-Path -Path $exportDirectory -ChildPath "export-list-items.json"
@@ -47,7 +48,7 @@ bw list items > $exportFile
 $bitwardenItems = Get-Content $exportFile | ConvertFrom-Json -Depth 10
 Write-Output "Exported $($bitwardenItems.Count) items total."
 
-## export orgaization password data
+## export organization password data
 foreach ($organization in $bitwardenOrganizations) {
     $exportFile = Join-Path -Path $exportDirectory -ChildPath "export-$($organization.id).json"
     $null = Invoke-Expression -Command "bw export --format json --organizationid $($organization.id) --output `"$exportFile`" "
