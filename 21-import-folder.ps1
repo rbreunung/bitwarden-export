@@ -5,16 +5,16 @@ param (
     [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Provide the target path of the export script.")]
     [string]$ImportPath,
     [Parameter( HelpMessage = "In debug mode only the read information is printed to test, what will be done.")]
-    [bool]$DebugMode = $true,
+    [bool]$WhatIf = $true,
     [Parameter(HelpMessage = "The output file of the folder mapping. The file will be created relative to the export path.")]
     [string]$FolderMapFile = "folder-map.json"
 )
 
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
-. ./common.ps1
+. ./00-common.ps1
 
 # debug mode settings
-if ($DebugMode) {
+if ($WhatIf) {
     $DebugPreference = 'Continue'
     Write-Debug "Debug Mode Folder enabled"
 }
@@ -46,7 +46,7 @@ if (Test-Path $FolderFile -PathType Leaf) {
 
             Write-Debug "Writing object $($FolderElement.object) name $($FolderElement.name) with id $($FolderElement.id)."
             ConvertTo-Json $FolderElement -Depth 1 | ConvertTo-Base64 | ForEach-Object {
-                if ($DebugMode) {
+                if ($WhatIf) {
                     Write-Debug "  bw create folder $_"
                 }
                 else {
@@ -54,19 +54,17 @@ if (Test-Path $FolderFile -PathType Leaf) {
                     Add-Member -InputObject $FolderContent[$i] -MemberType NoteProperty -Name "target-id" -Value $NewFolder.id
                     Remove-Variable NewFolder
                 }
-                Remove-Variable bytes
-                Remove-Variable baseEncoded
             }
         }
         Remove-Variable FolderElement
     }
 
     # store the new folder mapping
-    if (-not $DebugMode) {
+    if (-not $WhatIf) {
         ConvertTo-Json $FolderContent -Depth 2 | Out-File $FolderMapPath
     }
-    Write-Output "... all folders processed. Folder map written to `"$FolderMapFile`""
-
+    Write-Output "... all $($FolderContent.Length) folders processed. Folder map written to `"$FolderMapFile`""
+    Remove-Variable FolderContent
     exit 0
 }
 else {

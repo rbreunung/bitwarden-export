@@ -21,7 +21,7 @@ param (
 )
 
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
-. ./common.ps1
+. ./00-common.ps1
 
 # debug mode settings
 if ($DebugMode) {
@@ -50,17 +50,8 @@ $ItemMapPath = Join-Path $ImportPath -ChildPath $ItemMapFile
 # Create all folders. Accepts $OnlyFolder.
 if (-not ($OnlyPrivateVault -or $OnlyItems -or $OnlyAttachments)) {
 
-    $null = Invoke-Expression "./21-import-folder.ps1" 
+    $null = Invoke-Expression "./21-import-folder.ps1 -ImportPath $ImportPath -WhatIf $DebugMode -FolderMapFile $FolderMapFile" 
 }
-# If folder mapping is not in memory it must be read from file. Not required if only attachments need processing.
-if (-not $OnlyAttachments) {
-    if (-not (Test-Path $FolderMapPath -PathType Leaf)) {
-        Write-Error "The file $FolderMapFile has not been found in `"$FolderMapPath`"! This is required for folder to item mapping."
-        exit 4
-    }
-    $FolderContent = Get-Content $FolderMapPath | ConvertFrom-Json -Depth 2
-}
-
 
 # Read all personal items. Accepts $OnlyPrivateVault
 if (-not ($OnlyFolder -or $OnlyAttachments)) {
