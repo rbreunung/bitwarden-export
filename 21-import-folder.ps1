@@ -5,7 +5,7 @@ param (
     [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Provide the target path of the export script.")]
     [string]$ImportPath,
     [Parameter( HelpMessage = "In debug mode only the read information is printed to test, what will be done.")]
-    [bool]$WhatIf = $true,
+    [bool]$DebugMode = $true,
     [Parameter(HelpMessage = "The output file of the folder mapping. The file will be created relative to the export path.")]
     [string]$FolderMapFile = "folder-map.json"
 )
@@ -14,9 +14,9 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 . ./00-common.ps1
 
 # debug mode settings
-if ($WhatIf) {
+if ($DebugMode) {
     $DebugPreference = 'Continue'
-    Write-Debug "Debug Mode Folder enabled"
+    Write-Debug "Debug Mode enabled"
 }
 
 # check bitwarden unlocked
@@ -46,7 +46,7 @@ if (Test-Path $FolderFile -PathType Leaf) {
 
             Write-Debug "Writing object $($FolderElement.object) name $($FolderElement.name) with id $($FolderElement.id)."
             ConvertTo-Json $FolderElement -Depth 1 | ConvertTo-Base64 | ForEach-Object {
-                if ($WhatIf) {
+                if ($DebugMode) {
                     Write-Debug "  bw create folder $_"
                 }
                 else {
@@ -60,7 +60,7 @@ if (Test-Path $FolderFile -PathType Leaf) {
     }
 
     # store the new folder mapping
-    if (-not $WhatIf) {
+    if (-not $DebugMode) {
         ConvertTo-Json $FolderContent -Depth 2 | Out-File $FolderMapPath
     }
     Write-Output "... all $($FolderContent.Length) folders processed. Folder map written to `"$FolderMapFile`""

@@ -43,57 +43,18 @@ if (-not (Test-Path $ImportPath -PathType Container)) {
     exit 2
 }
 
-# TODO validate
-$FolderMapPath = Join-Path $ImportPath -ChildPath $FolderMapFile
 $ItemMapPath = Join-Path $ImportPath -ChildPath $ItemMapFile
 
 # Create all folders. Accepts $OnlyFolder.
 if (-not ($OnlyPrivateVault -or $OnlyItems -or $OnlyAttachments)) {
 
-    $null = Invoke-Expression "./21-import-folder.ps1 -ImportPath $ImportPath -WhatIf $DebugMode -FolderMapFile $FolderMapFile" 
+    $null = Invoke-Expression "./21-import-folder.ps1 -ImportPath $ImportPath -DebugMode $DebugMode -FolderMapFile $FolderMapFile" 
 }
 
 # Read all personal items. Accepts $OnlyPrivateVault
 if (-not ($OnlyFolder -or $OnlyAttachments)) {
-    if ($OnlyPrivateVault) {
-        Write-Output "Reading private items from `"export-list-items.json`"."
-    }
-    else {
-        Write-Output "Reading all items from `"export-list-items.json`"."
-    }
-    $ExportAll = Get-Content (Join-Path $ImportPath "export-list-items.json") | ConvertFrom-Json -Depth 10
-    for ($i = 0; $i -lt $ExportAll.Length; $i++) {
-        if ((0 -eq ($i % 20)) -and (-not (0 -eq $i))) {
-            Write-Output "  ... $i items processed so far ..."
-        }
-        $BitwardenItem = $ExportAll[$i]
-        if ($OnlyPrivateVault -and ($null -eq $BitwardenItem.organizationId)) {
-            Write-Debug "Skip organization item $($BitwardenItem.name) because of `"private items only`" import..."
-            continue
-        }
-        else {
-            Write-Debug "Processing Item $($BitwardenItem.name)..."
-            # delete organizationId as we do not handle it for now - TODO more organization support
-            $BitwardenItem = $BitwardenItem | Select-Object -Property * -ExcludeProperty organizationId
-        }
 
-        $BitwardenItem.folderId = Find-MapValue $FolderContent $BitwardenItem.folderId
-        $baseEncoded = ConvertTo-Json $BitwardenItem -Depth 9 | ConvertTo-Base64 
-        if ($DebugMode) {
-            Write-Debug "  bw create item $baseEncoded"
-            break
-        }
-        else {
-            $NewItem = bw create item $baseEncoded | ConvertFrom-Json -Depth 10
-            Add-Member -InputObject $ExportAll[$i] -MemberType NoteProperty -Name "target-id" -Value $NewItem.id
-            break
-        }
-    }
-    # store the new item mapping
-    if (-not $DebugMode) {
-        ConvertTo-Json $ExportAll -Depth 10 | Out-File $ItemMapPath
-    }
-    Write-Output "... all $($ExportAll.Count) items processed. Item map written to `"$ItemMapPath`""
+    $null = Invoke-Expression "./22-import-items.ps1 -ImportPath $ImportPath -DebugMode $DebugMode -OnlyPrivateVault $OnlyPrivateVault -FolderMapFile $FolderMapFile -ItemMapFile $ItemMapFile"
 }
 
 # Match all organizations
