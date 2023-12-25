@@ -16,6 +16,8 @@ bw login
 bw unlock
 # set the key for the terminal session to avoid further authentication queries
 $env:BW_SESSION="<my token>"
+# ensure your data us up-to-date
+bw sync
 ```
 
 ## Hints
