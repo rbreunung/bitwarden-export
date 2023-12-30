@@ -38,7 +38,7 @@ if (-not (Test-Path $ImportPath -PathType Container)) {
 # check folder mapping file exists
 $FolderMapPath = Join-Path $ImportPath -ChildPath $FolderMapFile
 if (-not (Test-Path $FolderMapPath -PathType Leaf)) {
-    Write-Error "The file $FolderMapFile has not been found in `"$FolderMapPath`"! This is required for folder to item mapping."
+    Write-Error "The folder file $FolderMapFile has not been found in `"$FolderMapPath`"! This is required for folder to item mapping."
     exit 23
 }
 

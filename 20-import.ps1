@@ -60,15 +60,6 @@ if (-not ($OnlyFolder -or $OnlyAttachments)) {
 # Match all organizations
 
 # add attachments to all items
-if ($OnlyAttachments) {
-    if (-not (Test-Path $ItemMapPath -PathType Leaf)) {
-        Write-Error "The file $ItemMapFile has not been found in `"$ItemMapPath`"! This is required for item to attachment mapping."
-        exit 5
-    }
-    $ExportAll = Get-Content $ItemMapPath | ConvertFrom-Json -Depth 10
-}
-
-
 if (-not ($OnlyFolder -or $OnlyPrivateVault -or $OnlyItems)) {
     foreach ($element in Get-ChildItem $ImportPath -Directory) {
         $name = $element.Name
