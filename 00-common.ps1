@@ -52,6 +52,17 @@ function Find-MapValue {
     }
 }
 
+function Get-FirstObjectWithName {
+    param (
+        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "A list of objects with the property `"name`" to be searched for the given value.")]
+        [PSObject[]]$ObjectArray,
+        [Parameter(Mandatory = $true, Position = 1, HelpMessage = "The `"name`" to be searched in the array.")]
+        [string]$Name
+    )
+    $ObjectArray | Where-Object { $_.name -eq $Name } | Select-Object -First 1
+}
+
+
 function Get-BitwardenStatusLocked {
     [OutputType([bool])]
     $BitwardenStatus = Invoke-Expression "bw status"  | ConvertFrom-Json -Depth 1 | Select-Object -ExpandProperty status
