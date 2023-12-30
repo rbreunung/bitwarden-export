@@ -3,6 +3,14 @@
 # Common functions for import and export steps.
 #$PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
+### TODO improve logging by writing it to a file
+## example input
+#$outputFile = "output.log"
+#$message = "Hello, world!"
+## Display on console and append to file
+#Write-Host $message
+#$message | Tee-Object -Append -FilePath $outputFile
+
 
 function ConvertTo-Base64 {
     [OutputType([string])]
