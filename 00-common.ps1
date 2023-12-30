@@ -38,7 +38,7 @@ function Find-MapValue {
 
     process {
 
-        if ($null -eq $SearchUuid) {
+        if ([string]::IsNullOrEmpty($SearchUuid)) {
             return $null
         }
 

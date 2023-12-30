@@ -49,14 +49,14 @@ $ItemMapPath = Join-Path $ImportPath -ChildPath $ItemMapFile
 
 
 if ($OnlyPrivateVault) {
-    Write-Output "Reading private items from `"export-list-items.json`"."
+    Write-Output "Reading private items from `"export-list-items.json`" ..."
 }
 else {
-    Write-Output "Reading all items from `"export-list-items.json`"."
+    Write-Output "Reading all items from `"export-list-items.json`" ..."
 }
 $AllExportedItems = Get-Content (Join-Path $ImportPath "export-list-items.json") | ConvertFrom-Json -Depth 10
 $SkipCount = 0
-Write-Output "Expect to process $($AllExportedItems.Length) items."
+Write-Output "  Expect to process $($AllExportedItems.Length) items ..."
 for ($i = 0; $i -lt $AllExportedItems.Length; $i++) {
     if ((0 -eq ($i % 20)) -and (-not (0 -eq $i))) {
         Write-Output "  ... $i items processed so far ..."
@@ -82,7 +82,6 @@ for ($i = 0; $i -lt $AllExportedItems.Length; $i++) {
         $NewItem = bw create item $baseEncoded | ConvertFrom-Json -Depth 10
         Add-Member -InputObject $AllExportedItems[$i] -MemberType NoteProperty -Name "target-id" -Value $NewItem.id
         Remove-Variable NewItem
-        break
     }
 }
 # store the new item mapping
