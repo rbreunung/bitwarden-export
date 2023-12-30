@@ -39,7 +39,7 @@ if (-not (Test-Path $ItemMapPath -PathType Leaf)) {
     exit 33
 }
 
-$AllExportedItems = Get-Content (Join-Path $ImportPath "export-list-items.json") | ConvertFrom-Json -Depth 10
+$AllExportedItems = Get-Content (Join-Path $ImportPath "item-map.json") | ConvertFrom-Json -Depth 10
 $AttachmentCount = 0
 
 foreach ($item in $AllExportedItems) {
@@ -48,9 +48,9 @@ foreach ($item in $AllExportedItems) {
         $AttachmentPath = Join-Path $ImportPath ($item.id)
         foreach ($attachment in $item.attachments) {
             $AttachmentCount++
-            $AttachmentFile = Join-Path $AttachmentPath ($attachment.name)
+            $AttachmentFile = Join-Path $AttachmentPath -ChildPath ($attachment.fileName)
             if ($DebugMode) {
-                Write-Debug "bw create attachment --itemid $(item.target-id) --file $AttachmentFile"
+                Write-Debug "bw create attachment --itemid $($item.{target-id}) --file $AttachmentFile"
             } else {
                 
             }
