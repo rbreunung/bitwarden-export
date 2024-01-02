@@ -50,27 +50,12 @@ foreach ($item in $AllExportedItems) {
             $AttachmentCount++
             $AttachmentFile = Join-Path $AttachmentPath -ChildPath ($attachment.fileName)
             if ($DebugMode) {
-                Write-Debug "bw create attachment --itemid $($item.{target-id}) --file $AttachmentFile"
+                Write-Debug "bw create attachment --itemid $($item.{target-id}) --file `"$AttachmentFile`""
             } else {
-                
+                bw create attachment --itemid ($item.{target-id}) --file $AttachmentFile --pretty > attachment-import.json
             }
         }
     }
 }
 Write-Output "Uploaded $AttachmentCount file attachments for the vault."
 
-foreach ($element in Get-ChildItem $ImportPath -Directory) {
-    $name = $element.Name
-    $itemPath = Join-Path $element "$name.json"
-    if (-not (Test-Path $itemPath -PathType Leaf)) {
-        #        Write-Debug "The folder $name does not contain a Bitwarden item file $name.json. Skipping!"
-        continue
-    }
-    Write-Output "Processing element $name"
-    $bitwardenElement = Get-Content $itemPath | ConvertFrom-Json -Depth 10
-    foreach ($attachment in $bitwardenElement.attachments) {
-        #       Write-Output "Importing `"$($attachment.fileName)`" for entry $($bitwardenElement.name)"
-    }
-
-
-}
