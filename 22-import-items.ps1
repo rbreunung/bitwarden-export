@@ -56,11 +56,8 @@ else {
 }
 $AllExportedItems = Get-Content (Join-Path $ImportPath "export-list-items.json") | ConvertFrom-Json -Depth 10
 $SkipCount = 0
-Write-Output "  Expect to process $($AllExportedItems.Length) items ..."
 for ($i = 0; $i -lt $AllExportedItems.Length; $i++) {
-    if ((0 -eq ($i % 20)) -and (-not (0 -eq $i))) {
-        Write-Output "  ... $i items processed so far ..."
-    }
+    Write-Progress -Activity "Creating Items" -Status "item $i of $($AllExportedItems.Length) items in progress" -Id 0 -PercentComplete ($i / ($AllExportedItems.Length) * 100)
     $BitwardenItem = $AllExportedItems[$i]
     if ($OnlyPrivateVault -and (-not ($null -eq $BitwardenItem.organizationId))) {
         Write-Debug "Skip organization item $($BitwardenItem.name) because of `"private items only`" import..."
@@ -84,6 +81,8 @@ for ($i = 0; $i -lt $AllExportedItems.Length; $i++) {
         Remove-Variable NewItem
     }
 }
+Write-Progress -Id 0 -Completed
+
 # store the new item mapping
 if (-not $DebugMode) {
     ConvertTo-Json $AllExportedItems -Depth 10 | Out-File $ItemMapPath
