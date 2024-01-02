@@ -42,11 +42,12 @@ bw list folders > $exportFile
 $BitwardenFolders = Get-Content $exportFile | ConvertFrom-Json -Depth 2
 Write-Output "Exported $($BitwardenFolders.Count) folders total."
 
-## Export folder items
+## Export items
 $exportFile = Join-Path -Path $exportDirectory -ChildPath "export-list-items.json"
 bw list items > $exportFile
-$bitwardenItems = Get-Content $exportFile | ConvertFrom-Json -Depth 10
-Write-Output "Exported $($bitwardenItems.Count) items total."
+$BitwardenItems = Get-Content $exportFile | ConvertFrom-Json -Depth 10
+$BitwardenItemsCount = $BitwardenItems.Count
+Write-Output "Exported $BitwardenItemsCount items total."
 
 ## export organization password data
 foreach ($organization in $bitwardenOrganizations) {
@@ -58,12 +59,10 @@ foreach ($organization in $bitwardenOrganizations) {
 Remove-Variable bitwardenContent
 
 ## export attachments
-Write-Output "Start processing attachments..."
 $counter = 0
-foreach ($bitwardenElement in $bitwardenItems) {
-    if (0 -eq (++$counter % 100)) {
-        Write-Output "  ... $counter items processed so far ..."
-    }
+foreach ($bitwardenElement in $BitwardenItems) {
+    $counter++
+    Write-Progress -Activity "Download Attachments" -Status "processing $counter item of $BitwardenItemsCount items total" -Id 0 -PercentComplete ($counter / $BitwardenItemsCount * 100)
     $itemDirectory = Join-Path -Path $exportDirectory -ChildPath ($bitwardenElement.id)
     if (Get-Member -InputObject $bitwardenElement -Name "attachments") {
         Write-Debug "The element $($bitwardenElement.name) has $($bitwardenElement.attachments.Count) attachments." 
@@ -75,7 +74,7 @@ foreach ($bitwardenElement in $bitwardenItems) {
         }
     }
 }
-
+Write-Progress -Id 0 -Completed
 Write-Output "Processed Downloads from all elements."
 
 
